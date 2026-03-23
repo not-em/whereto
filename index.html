@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visa Mapper — Where can you go?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<style>
+  :root {
+    --navy:     #0d1b2a;
+    --navy-mid: #162435;
+    --navy-light: #1e3350;
+    --cream:    #f5efe6;
+    --gold:     #c9a84c;
+    --gold-dim: #8a6e2f;
+    --muted:    #6b7f96;
+    --border:   rgba(201,168,76,0.18);
+
+    --visa-free:     #4caf82;
+    --eta:           #4a9edd;
+    --evisa:         #9b7fd4;
+    --voa:           #e8a838;
+    --evisa-voa:     #d4824a;
+    --visa-required: #c0454a;
+    --refused:       #2c3e50;
+    --unknown:       #2a3a4a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--cream);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--navy);
+    z-index: 10;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+
+  header h1 span {
+    font-weight: 400;
+    font-style: italic;
+    color: var(--cream);
+    opacity: 0.7;
+    font-size: 0.95rem;
+    margin-left: 10px;
+  }
+
+  .header-mode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: var(--navy-light);
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--gold-dim); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--cream);
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* ── Layout ── */
+  .app {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--navy-mid);
+  }
+
+  .sidebar-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-section:last-child { border-bottom: none; }
+
+  .section-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--navy);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus { border-color: var(--gold-dim); }
+
+  .search-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+  }
+
+  .search-dropdown.open { display: block; }
+
+  .search-option {
+    padding: 8px 12px;
+    font-size: 0.83rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .search-option:hover { background: rgba(201,168,76,0.1); }
+
+  /* Travellers list */
+  .travellers {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  .traveller-card {
+    background: var(--navy);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .traveller-card:hover { border-color: var(--gold-dim); }
+
+  .traveller-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    cursor: pointer;
+  }
+
+  .traveller-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--cream);
+  }
+
+  .traveller-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .traveller-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .btn-icon {
+    width: 22px; height: 22px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s, background 0.15s;
+  }
+  .btn-icon:hover { color: var(--cream); background: rgba(255,255,255,0.08); }
+  .btn-icon.danger:hover { color: #e74c3c; }
+
+  .traveller-passports {
+    padding: 0 12px 10px;
+  }
+
+  .passport-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    color: var(--cream);
+    margin: 3px 3px 0 0;
+  }
+
+  .passport-tag button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 0;
+    margin-left: 2px;
+  }
+  .passport-tag button:hover { color: #e74c3c; }
+
+  .add-passport-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    cursor: pointer;
+    margin-top: 6px;
+    transition: border-color 0.15s, color 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .add-passport-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+  .add-traveller-btn {
+    width: 100%;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    margin-top: 4px;
+  }
+  .add-traveller-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+  /* Random button */
+  .random-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .random-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: rgba(201,168,76,0.05);
+  }
+  .random-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* Legend */
+  .legend {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .legend-item:hover { color: var(--cream); }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Map area ── */
+  .map-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #map-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .country-path {
+    stroke: rgba(13,27,42,0.6);
+    stroke-width: 0.4px;
+    transition: opacity 0.3s;
+    cursor: pointer;
+  }
+
+  .country-path:hover {
+    stroke: var(--gold);
+    stroke-width: 1.2px;
+    opacity: 1 !important;
+  }
+
+  .country-path.highlighted {
+    stroke: var(--gold);
+    stroke-width: 1.5px;
+    filter: brightness(1.2);
+  }
+
+  /* ── Country panel ── */
+  .country-panel {
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 320px;
+    background: var(--navy-mid);
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 20;
+  }
+
+  .country-panel.open {
+    transform: translateX(0);
+  }
+
+  .panel-header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .panel-close:hover { color: var(--cream); background: rgba(255,255,255,0.08); }
+
+  .panel-country-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: var(--cream);
+    margin-bottom: 10px;
+    padding-right: 30px;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+  }
+
+  .panel-field {
+    margin-bottom: 18px;
+  }
+
+  .panel-field-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+
+  .panel-field-value {
+    font-size: 0.85rem;
+    color: var(--cream);
+    line-height: 1.5;
+  }
+
+  .panel-field-value.muted {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .group-link {
+    color: var(--gold);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    cursor: pointer;
+    transition: text-decoration-color 0.15s;
+    font-weight: 500;
+  }
+  .group-link:hover { text-decoration-color: var(--gold); }
+
+  .wiki-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 10px;
+    transition: color 0.15s, border-color 0.15s;
+    margin-top: 8px;
+  }
+  .wiki-link:hover { color: var(--cream); border-color: var(--gold-dim); }
+
+  /* Traveller breakdown in panel */
+  .traveller-breakdown {
+    margin-top: 4px;
+  }
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.8rem;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-passport { color: var(--muted); font-size: 0.72rem; }
+
+  /* Tooltip */
+  .map-tooltip {
+    position: absolute;
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 50;
+    max-width: 200px;
+  }
+
+  .map-tooltip.visible { opacity: 1; }
+  .map-tooltip-name { font-weight: 500; margin-bottom: 3px; }
+  .map-tooltip-status { color: var(--muted); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Loading state */
+  .loading {
+    position: fixed;
+    inset: 0;
+    background: var(--navy);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.5s;
+  }
+  .loading.hidden { opacity: 0; pointer-events: none; }
+  .loading-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .loading-sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .loading-bar {
+    width: 200px;
+    height: 2px;
+    background: var(--navy-light);
+    border-radius: 1px;
+    margin-top: 24px;
+    overflow: hidden;
+  }
+  .loading-bar-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 1px;
+    animation: loadbar 1.5s ease-in-out infinite;
+  }
+  @keyframes loadbar {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  /* Empty state */
+  .map-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  .map-empty-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--cream);
+    margin-bottom: 8px;
+  }
+  .map-empty-sub {
+    font-size: 0.83rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="loading-title">Visa Mapper</div>
+  <div class="loading-sub">Loading the world…</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<header>
+  <h1>Visa Mapper <span>Where can you go?</span></h1>
+  <div class="header-mode">
+    <span>Solo</span>
+    <div class="toggle" id="group-toggle" title="Toggle group travel mode"></div>
+    <span>Group</span>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Passport / Traveller selector -->
+    <div class="sidebar-section" id="solo-section">
+      <div class="section-label">Passport</div>
+      <div class="search-wrap" id="solo-search-wrap">
+        <input type="text" class="search-input" id="solo-search"
+               placeholder="Search nationality…" autocomplete="off">
+        <div class="search-dropdown" id="solo-dropdown"></div>
+        <button class="random-btn" id="solo-random-btn" title="Add random passport">
+          🎲 Random
+        </button>
+      </div>
+    </div>
+
+    <!-- Group section (hidden by default) -->
+    <div class="sidebar-section" id="group-section" style="display:none">
+      <div class="section-label">Travellers</div>
+      <div class="search-wrap" id="group-search-wrap" style="display:none">
+        <input type="text" class="search-input" id="group-search"
+               placeholder="Add passport…" autocomplete="off">
+        <div class="search-dropdown" id="group-dropdown"></div>
+        <button class="random-btn" id="group-random-btn" title="Add random passport">
+          🎲 Random
+        </button>
+      </div>
+    </div>
+
+    <!-- Traveller cards -->
+    <div class="travellers" id="travellers-list" style="display:none"></div>
+
+    <!-- Add traveller btn -->
+    <div style="padding:0 20px 16px; display:none" id="add-traveller-wrap">
+      <button class="add-traveller-btn" id="add-traveller-btn">+ Add traveller</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="section-label">Legend</div>
+      <div class="legend-item" data-filter="home_country">
+        <div class="legend-dot" style="background:#2d8f3f"></div>
+        Home country
+      </div>
+      <div class="legend-item" data-filter="visa_free">
+        <div class="legend-dot" style="background:var(--visa-free)"></div>
+        Visa free
+      </div>
+      <div class="legend-item" data-filter="eta">
+        <div class="legend-dot" style="background:var(--eta)"></div>
+        ETA / eVisitor
+      </div>
+      <div class="legend-item" data-filter="evisa">
+        <div class="legend-dot" style="background:var(--evisa)"></div>
+        eVisa
+      </div>
+      <div class="legend-item" data-filter="evisa_or_voa">
+        <div class="legend-dot" style="background:var(--evisa-voa)"></div>
+        eVisa or Visa on arrival
+      </div>
+      <div class="legend-item" data-filter="visa_on_arrival">
+        <div class="legend-dot" style="background:var(--voa)"></div>
+        Visa on arrival
+      </div>
+      <div class="legend-item" data-filter="visa_required">
+        <div class="legend-dot" style="background:var(--visa-required)"></div>
+        Visa required
+      </div>
+      <div class="legend-item" data-filter="admission_refused">
+        <div class="legend-dot" style="background:var(--refused)"></div>
+        Admission refused
+      </div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="map-area" id="map-area">
+    <svg id="map-svg"></svg>
+    <div class="map-empty" id="map-empty">
+      <div class="map-empty-title">Select a passport</div>
+      <div class="map-empty-sub">to see where you can travel</div>
+    </div>
+    <div class="map-tooltip" id="map-tooltip">
+      <div class="map-tooltip-name" id="tooltip-name"></div>
+      <div class="map-tooltip-status" id="tooltip-status"></div>
+    </div>
+  </div>
+
+  <!-- Country detail panel -->
+  <div class="country-panel" id="country-panel">
+    <div class="panel-header">
+      <button class="panel-close" id="panel-close">✕</button>
+      <div class="panel-country-name" id="panel-name">—</div>
+      <span class="status-badge" id="panel-badge">
+        <span class="status-dot"></span>
+        <span id="panel-badge-text">—</span>
+      </span>
+    </div>
+    <div class="panel-body" id="panel-body"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────────
+
+const STATUS_COLOURS = {
+  visa_free:        '#4caf82',
+  eta:              '#4a9edd',
+  evisa:            '#9b7fd4',
+  evisa_or_voa:     '#d4824a',
+  visa_on_arrival:  '#e8a838',
+  visa_required:    '#c0454a',
+  admission_refused:'#2c3e50',
+  unknown:          '#1e2e3e',
+  home_country:     '#2d8f3f', // Darker green for home countries
+};
+
+const STATUS_LABELS = {
+  visa_free:        'Visa free',
+  eta:              'ETA / eVisitor',
+  evisa:            'eVisa',
+  evisa_or_voa:     'eVisa or Visa on arrival',
+  visa_on_arrival:  'Visa on arrival',
+  visa_required:    'Visa required',
+  admission_refused:'Admission refused',
+  unknown:          'No data',
+  home_country:     'Home country',
+};
+
+// Mapping from nationality to home country name
+const NATIONALITY_TO_COUNTRY = {
+  'Afghan': 'Afghanistan',
+  'Albanian': 'Albania',
+  'Algerian': 'Algeria',
+  'Andorran': 'Andorra',
+  'Angolan': 'Angola',
+  'Antigua and Barbuda': 'Antigua and Barbuda',
+  'Argentine': 'Argentina',
+  'Armenian': 'Armenia',
+  'Australian': 'Australia',
+  'Austrian': 'Austria',
+  'Azerbaijani': 'Azerbaijan',
+  'Bahamian': 'Bahamas',
+  'Bahraini': 'Bahrain',
+  'Bangladeshi': 'Bangladesh',
+  'Barbadian': 'Barbados',
+  'Belarusian': 'Belarus',
+  'Belgian': 'Belgium',
+  'Belizean': 'Belize',
+  'Beninese': 'Benin',
+  'Bhutanese': 'Bhutan',
+  'Bolivian': 'Bolivia',
+  'Bosnia and Herzegovina': 'Bosnia and Herzegovina',
+  'Botswana': 'Botswana',
+  'Brazilian': 'Brazil',
+  'British': 'United Kingdom',
+  'British Nationals (Overseas)': 'Hong Kong',
+  'British Overseas': 'United Kingdom',
+  'British Overseas Territories': 'United Kingdom',
+  'Bruneian': 'Brunei',
+  'Bulgarian': 'Bulgaria',
+  'Burkinabe': 'Burkina Faso',
+  'Burundian': 'Burundi',
+  'Cambodian': 'Cambodia',
+  'Cameroonian': 'Cameroon',
+  'Canadian': 'Canada',
+  'Cape Verdean': 'Cape Verde',
+  'Central African': 'Central African Republic',
+  'Chadian': 'Chad',
+  'Chilean': 'Chile',
+  'Chinese': 'China',
+  'Chinese (Hong Kong)': 'Hong Kong',
+  'Chinese (Macau)': 'Macau',
+  'Colombian': 'Colombia',
+  'Comorian': 'Comoros',
+  'Costa Rican': 'Costa Rica',
+  'Croatian': 'Croatia',
+  'Cuban': 'Cuba',
+  'Cypriot': 'Cyprus',
+  'Czech': 'Czech Republic',
+  'Danish': 'Denmark',
+  'Democratic Republic of the Congo': 'Democratic Republic of the Congo',
+  'Djiboutian': 'Djibouti',
+  'Dominica': 'Dominica',
+  'Dominican Republic': 'Dominican Republic',
+  'Dutch': 'Netherlands',
+  'East Timorese': 'East Timor',
+  'Ecuadorian': 'Ecuador',
+  'Egyptian': 'Egypt',
+  'Emirati': 'United Arab Emirates',
+  'Equatorial Guinean': 'Equatorial Guinea',
+  'Eritrean': 'Eritrea',
+  'Estonian': 'Estonia',
+  'Ethiopian': 'Ethiopia',
+  'Fijian': 'Fiji',
+  'Finnish': 'Finland',
+  'French': 'France',
+  'Gabonese': 'Gabon',
+  'Gambian': 'Gambia',
+  'Georgian': 'Georgia',
+  'German': 'Germany',
+  'Ghanaian': 'Ghana',
+  'Greek': 'Greece',
+  'Grenadian': 'Grenada',
+  'Guatemalan': 'Guatemala',
+  'Guinean': 'Guinea',
+  'Guinea-Bissauan': 'Guinea-Bissau',
+  'Guyanese': 'Guyana',
+  'Haitian': 'Haiti',
+  'Honduran': 'Honduras',
+  'Hungarian': 'Hungary',
+  'Icelandic': 'Iceland',
+  'Indian': 'India',
+  'Indonesian': 'Indonesia',
+  'Iranian': 'Iran',
+  'Iraqi': 'Iraq',
+  'Irish': 'Ireland',
+  'Israeli': 'Israel',
+  'Italian': 'Italy',
+  'Ivorian': 'Ivory Coast',
+  'Jamaican': 'Jamaica',
+  'Japanese': 'Japan',
+  'Jordanian': 'Jordan',
+  'Kazakhstani': 'Kazakhstan',
+  'Kenyan': 'Kenya',
+  'Kiribati': 'Kiribati',
+  'North Korean': 'North Korea',
+  'South Korean': 'South Korea',
+  'Kuwaiti': 'Kuwait',
+  'Kyrgyzstani': 'Kyrgyzstan',
+  'Laotian': 'Laos',
+  'Latvian': 'Latvia',
+  'Lebanese': 'Lebanon',
+  'Liberian': 'Liberia',
+  'Libyan': 'Libya',
+  'Lithuanian': 'Lithuania',
+  'Luxembourgish': 'Luxembourg',
+  'Malagasy': 'Madagascar',
+  'Malawian': 'Malawi',
+  'Malaysian': 'Malaysia',
+  'Maldivian': 'Maldives',
+  'Malian': 'Mali',
+  'Maltese': 'Malta',
+  'Mauritian': 'Mauritius',
+  'Mexican': 'Mexico',
+  'Moldovan': 'Moldova',
+  'Mongolian': 'Mongolia',
+  'Montenegrin': 'Montenegro',
+  'Moroccan': 'Morocco',
+  'Mozambican': 'Mozambique',
+  'Burmese': 'Myanmar',
+  'Namibian': 'Namibia',
+  'Nepalese': 'Nepal',
+  'New Zealand': 'New Zealand',
+  'Nicaraguan': 'Nicaragua',
+  'Nigerien': 'Niger',
+  'Nigerian': 'Nigeria',
+  'North Macedonian': 'North Macedonia',
+  'Norwegian': 'Norway',
+  'Omani': 'Oman',
+  'Pakistani': 'Pakistan',
+  'Panamanian': 'Panama',
+  'Papua New Guinean': 'Papua New Guinea',
+  'Paraguayan': 'Paraguay',
+  'Peruvian': 'Peru',
+  'Philippine': 'Philippines',
+  'Polish': 'Poland',
+  'Portuguese': 'Portugal',
+  'Qatari': 'Qatar',
+  'Romanian': 'Romania',
+  'Russian': 'Russia',
+  'Rwandan': 'Rwanda',
+  'Salvadoran': 'El Salvador',
+  'Saudi Arabian': 'Saudi Arabia',
+  'Senegalese': 'Senegal',
+  'Serbian': 'Serbia',
+  'Sierra Leonean': 'Sierra Leone',
+  'Singaporean': 'Singapore',
+  'Slovak': 'Slovakia',
+  'Slovenian': 'Slovenia',
+  'Solomon Islander': 'Solomon Islands',
+  'Somali': 'Somalia',
+  'South African': 'South Africa',
+  'Spanish': 'Spain',
+  'Sri Lankan': 'Sri Lanka',
+  'Sudanese': 'Sudan',
+  'Surinamese': 'Suriname',
+  'Swazi': 'Eswatini',
+  'Swedish': 'Sweden',
+  'Swiss': 'Switzerland',
+  'Syrian': 'Syria',
+  'Taiwanese': 'Taiwan',
+  'Tajikistani': 'Tajikistan',
+  'Tanzanian': 'Tanzania',
+  'Thai': 'Thailand',
+  'Togolese': 'Togo',
+  'Trinidadian and Tobagonian': 'Trinidad and Tobago',
+  'Tunisian': 'Tunisia',
+  'Turkish': 'Turkey',
+  'Turkmenistani': 'Turkmenistan',
+  'Ugandan': 'Uganda',
+  'Ukrainian': 'Ukraine',
+  'United States': 'United States',
+  'Uruguayan': 'Uruguay',
+  'Uzbekistani': 'Uzbekistan',
+  'Venezuelan': 'Venezuela',
+  'Vietnamese': 'Vietnam',
+  'Yemeni': 'Yemen',
+  'Zambian': 'Zambia',
+  'Zimbabwean': 'Zimbabwe',
+};
+
+// Priority: lower = better for traveller
+// For OR (multi-passport): take lowest priority
+// For AND (group): take highest priority
+const STATUS_PRIORITY = {
+  visa_free: 0, eta: 1, evisa: 2,
+  evisa_or_voa: 3, visa_on_arrival: 3,
+  visa_required: 4, admission_refused: 5, unknown: 6,
+};
+
+// Map TopoJSON country names → our Wikipedia names
+const TOPO_TO_WIKI = {
+  'United States of America': 'United States',
+  'United States': 'United States',
+  'Czech Republic': 'Czech Republic',
+  'Czechia': 'Czech Republic',
+  'Ivory Coast': "Cte d'Ivoire",
+  "Côte d'Ivoire": "Cte d'Ivoire",
+  "Cte d'Ivoire": "Cte d'Ivoire",
+  'Congo': 'Congo',
+  'Democratic Republic of the Congo': 'DR Congo',
+  'Dem. Rep. Congo': 'DR Congo',
+  'Republic of the Congo': 'Congo',
+  'The Bahamas': 'Bahamas',
+  'Bahamas': 'Bahamas',
+  'The Gambia': 'Gambia',
+  'Gambia': 'Gambia',
+  'East Timor': 'Timor-Leste',
+  'Timor-Leste': 'Timor-Leste',
+  'Myanmar': 'Myanmar',
+  'Burma': 'Myanmar',
+  'Vatican City': 'Vatican City',
+  'Holy See': 'Vatican City',
+  'North Korea': 'North Korea',
+  'South Korea': 'South Korea',
+  'Republic of Korea': 'South Korea',
+  "Dem. Rep. Korea": 'North Korea',
+  'Macedonia': 'North Macedonia',
+  'North Macedonia': 'North Macedonia',
+  'Bosnia and Herz.': 'Bosnia and Herzegovina',
+  'Central African Rep.': 'Central African Republic',
+  'Dominican Rep.': 'Dominican Republic',
+  'Eq. Guinea': 'Equatorial Guinea',
+  'eSwatini': 'Eswatini',
+  'Swaziland': 'Eswatini',
+  'S. Sudan': 'South Sudan',
+  'Solomon Is.': 'Solomon Islands',
+  'Solomon Islands': 'Solomon Islands',
+  'Marshall Is.': 'Marshall Islands',
+  'Marshall Islands': 'Marshall Islands',
+  'Micronesia': 'Micronesia',
+  'Fed. Sts. Micronesia': 'Micronesia',
+  'Brunei': 'Brunei',
+  'Brunei Darussalam': 'Brunei',
+  'Trinidad and Tobago': 'Trinidad and Tobago',
+  'São Tomé and Príncipe': 'So Tom and Prncipe',
+  'Sao Tome and Principe': 'So Tom and Prncipe',
+  'So Tom and Prncipe': 'So Tom and Prncipe',
+  'Cape Verde': 'Cape Verde',
+  'Cabo Verde': 'Cape Verde',
+  'Kyrgyzstan': 'Kyrgyzstan',
+  'Kyrgyz Republic': 'Kyrgyzstan',
+  'Laos': 'Laos',
+  "Lao PDR": 'Laos',
+  'Russia': 'Russia',
+  'Russian Federation': 'Russia',
+  'Syria': 'Syria',
+  'Syrian Arab Republic': 'Syria',
+  'Iran': 'Iran',
+  'W. Sahara': 'Western Sahara',
+  'Palestine': 'Palestine',
+  'Taiwan': 'Taiwan',
+  'Republic of China': 'Republic of China',
+  'China': 'China',
+  "People's Republic of China": "People's Republic of China",
+  'Hong Kong': 'Hong Kong',
+  'Hong Kong SAR': 'Hong Kong',
+  'Macao': 'Macao',
+  'Macau': 'Macau',
+  'Macau SAR': 'Macau',
+  'Australia': 'Australia',
+  'Denmark': 'Denmark',
+  'France': 'France',
+  'New Zealand': 'New Zealand',
+  'United Kingdom': 'United Kingdom',
+  'Somaliland': 'Somaliland',
+  'South Ossetia': 'South Ossetia',
+  'Transnistria': 'Transnistria',
+  'Kosovo': 'Kosovo',
+};
+
+// ─────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────
+
+let visaData = null;
+let groupsData = null;
+let worldTopo = null;
+
+// Solo mode state
+let soloPassports = [];   // list of nationality strings
+
+// Group mode state
+let groupMode = false;
+let travellers = [];      // [{name, passports: []}]
+let activeTravellerIdx = null;
+
+// UI state
+let highlightedGroup = null;
+let activeFilter = null;
+
+// ─────────────────────────────────────────────────────────────
+// LOAD DATA
+// ─────────────────────────────────────────────────────────────
+
+async function loadData() {
+  const [visaJson, groupsJson, topo] = await Promise.all([
+    fetch('visa_data.json').then(r => r.json()),
+    fetch('groups.json').then(r => r.json()),
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r => r.json()),
+  ]);
+  visaData = visaJson;
+  groupsData = groupsJson;
+  worldTopo = topo;
+}
+
+// ─────────────────────────────────────────────────────────────
+// COMPUTE VISA STATUS
+// ─────────────────────────────────────────────────────────────
+
+// Resolve best status for a list of passports (OR logic)
+function resolvePassports(passports, country) {
+  let best = null;
+  let bestInfo = null;
+  for (const nat of passports) {
+    const data = visaData.data[nat];
+    if (!data) continue;
+    const info = data[country];
+    if (!info) continue;
+    const p = STATUS_PRIORITY[info.status] ?? 6;
+    if (best === null || p < best) {
+      best = p;
+      bestInfo = { ...info, nationality: nat };
+    }
+  }
+  return bestInfo;
+}
+
+// Build map: countryName → {status, info, breakdown}
+function computeMap() {
+  if (!visaData) return {};
+  const result = {};
+
+  if (!groupMode) {
+    // Solo mode: OR across soloPassports
+    if (soloPassports.length === 0) return {};
+    for (const country of visaData.countries) {
+      const info = resolvePassports(soloPassports, country);
+      if (info) {
+        result[country] = { status: info.status, info, breakdown: null };
+        // DEBUG Brazil
+        if (country === 'Brazil' || country.includes('Brazil')) {
+          console.log('computeMap: Adding Brazil to result', { country, info });
+        }
+      }
+    }
+  } else {
+    // Group mode: AND across travellers, OR within each traveller
+    if (travellers.length === 0) return {};
+    const activeTravellers = travellers.filter(t => t.passports.length > 0);
+    if (activeTravellers.length === 0) return {};
+
+    for (const country of visaData.countries) {
+      let worst = null;
+      let worstP = -1;
+      const breakdown = [];
+
+      for (const t of activeTravellers) {
+        const info = resolvePassports(t.passports, country);
+        if (!info) continue;
+        const p = STATUS_PRIORITY[info.status] ?? 6;
+        breakdown.push({ traveller: t.name, info });
+        if (p > worstP) {
+          worstP = p;
+          worst = info;
+        }
+      }
+
+      if (worst) {
+        result[country] = { status: worst.status, info: worst, breakdown };
+      }
+    }
+  }
+
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAP
+// ─────────────────────────────────────────────────────────────
+
+let projection, path, countryPaths, svg, g;
+
+function initMap() {
+  const el = document.getElementById('map-svg');
+  const W = el.clientWidth;
+  const H = el.clientHeight;
+
+  svg = d3.select('#map-svg');
+  svg.selectAll('*').remove();
+
+  projection = d3.geoNaturalEarth1()
+    .scale(W / 6.2)
+    .translate([W / 2, H / 2]);
+
+  path = d3.geoPath().projection(projection);
+
+  // Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([0.8, 8])
+    .on('zoom', e => g.attr('transform', e.transform));
+
+  svg.call(zoom);
+
+  // Graticule
+  g = svg.append('g');
+  g.append('path')
+    .datum(d3.geoGraticule()())
+    .attr('d', path)
+    .attr('fill', 'none')
+    .attr('stroke', 'rgba(255,255,255,0.04)')
+    .attr('stroke-width', 0.5);
+
+  // Sphere
+  g.append('path')
+    .datum({type: 'Sphere'})
+    .attr('d', path)
+    .attr('fill', '#0a1520');
+
+  const countries = topojson.feature(worldTopo, worldTopo.objects.countries);
+
+  // Country name lookup from topo
+  // world-atlas 110m has numeric ids, we need names
+  const topoNames = getTopoNames(worldTopo);
+
+  countryPaths = g.selectAll('.country-path')
+    .data(countries.features)
+    .enter()
+    .append('path')
+    .attr('class', 'country-path')
+    .attr('d', path)
+    .attr('fill', STATUS_COLOURS.unknown)
+    .attr('data-name', d => {
+      const numId = d.id;
+      return topoNames[numId] || '';
+    })
+    .on('mousemove', onCountryHover)
+    .on('mouseleave', onCountryLeave)
+    .on('click', onCountryClick);
+}
+
+function getTopoNames(topo) {
+  // world-atlas 110m doesn't include names in properties,
+  // so we use a minimal numeric id → name lookup
+  // CRITICAL: TopoJSON uses STRING IDs with zero-padding (e.g., '076' not 76)
+  return {
+    '004':'Afghanistan','008':'Albania','010':'Greenland','012':'Algeria','024':'Angola',
+    '031':'Azerbaijan','032':'Argentina','036':'Australia','040':'Austria',
+    '044':'Bahamas','050':'Bangladesh','051':'Armenia','056':'Belgium',
+    '064':'Bhutan','068':'Bolivia','070':'Bosnia and Herzegovina','072':'Botswana',
+    '076':'Brazil','084':'Belize','090':'Solomon Islands','096':'Brunei',
+    '100':'Bulgaria','104':'Myanmar','108':'Burundi','112':'Belarus','116':'Cambodia',
+    '120':'Cameroon','124':'Canada','132':'Cape Verde','140':'Central African Republic',
+    '144':'Sri Lanka','148':'Chad','152':'Chile','156':'China','158':'Taiwan',
+    '170':'Colombia','174':'Comoros','178':'Congo','180':'DR Congo','188':'Costa Rica',
+    '191':'Croatia','192':'Cuba','196':'Cyprus','203':'Czech Republic','204':'Benin',
+    '208':'Denmark','212':'Dominica','214':'Dominican Republic','218':'Ecuador',
+    '222':'El Salvador','226':'Equatorial Guinea','231':'Ethiopia','232':'Eritrea',
+    '233':'Estonia','238':'Falkland Islands','242':'Fiji','246':'Finland','250':'France',
+    '260':'French Southern Territories','262':'Djibouti','266':'Gabon','268':'Georgia',
+    '270':'Gambia','275':'Palestine','276':'Germany','288':'Ghana','296':'Kiribati',
+    '300':'Greece','304':'Greenland','308':'Grenada','320':'Guatemala','324':'Guinea',
+    '328':'Guyana','332':'Haiti','340':'Honduras','348':'Hungary','352':'Iceland',
+    '356':'India','360':'Indonesia','364':'Iran','368':'Iraq','372':'Ireland',
+    '376':'Israel','380':'Italy','384':"Cte d'Ivoire",'388':'Jamaica','392':'Japan',
+    '398':'Kazakhstan','400':'Jordan','404':'Kenya','408':'North Korea','410':'South Korea',
+    '414':'Kuwait','417':'Kyrgyzstan','418':'Laos','422':'Lebanon','426':'Lesotho',
+    '428':'Latvia','430':'Liberia','434':'Libya','440':'Lithuania','442':'Luxembourg',
+    '450':'Madagascar','454':'Malawi','458':'Malaysia','466':'Mali','478':'Mauritania',
+    '484':'Mexico','496':'Mongolia','498':'Moldova','499':'Montenegro','504':'Morocco',
+    '508':'Mozambique','512':'Oman','516':'Namibia','524':'Nepal','528':'Netherlands',
+    '540':'New Caledonia','548':'Vanuatu','554':'New Zealand','558':'Nicaragua',
+    '562':'Niger','566':'Nigeria','578':'Norway','586':'Pakistan','591':'Panama',
+    '598':'Papua New Guinea','600':'Paraguay','604':'Peru','608':'Philippines',
+    '616':'Poland','620':'Portugal','624':'Guinea-Bissau','626':'Timor-Leste',
+    '630':'Puerto Rico','634':'Qatar','642':'Romania','643':'Russia','646':'Rwanda',
+    '682':'Saudi Arabia','686':'Senegal','688':'Serbia','694':'Sierra Leone',
+    '703':'Slovakia','704':'Vietnam','705':'Slovenia','706':'Somalia','710':'South Africa',
+    '716':'Zimbabwe','724':'Spain','728':'South Sudan','729':'Sudan','732':'Western Sahara',
+    '740':'Suriname','748':'Eswatini','752':'Sweden','756':'Switzerland','760':'Syria',
+    '762':'Tajikistan','764':'Thailand','768':'Togo','780':'Trinidad and Tobago',
+    '784':'United Arab Emirates','788':'Tunisia','792':'Turkey','795':'Turkmenistan',
+    '800':'Uganda','804':'Ukraine','807':'North Macedonia','818':'Egypt',
+    '826':'United Kingdom','834':'Tanzania','840':'United States','854':'Burkina Faso',
+    '858':'Uruguay','860':'Uzbekistan','862':'Venezuela','887':'Yemen','894':'Zambia',
+  };
+}
+
+function getWikiName(topoName) {
+  return TOPO_TO_WIKI[topoName] || topoName;
+}
+
+function updateMap() {
+  if (!countryPaths) return;
+  const mapData = computeMap();
+  const empty = Object.keys(mapData).length === 0;
+
+  document.getElementById('map-empty').style.display = empty ? 'flex' : 'none';
+
+  countryPaths.each(function(d) {
+    const el = d3.select(this);
+    const topoName = el.attr('data-name');
+    const wikiName = getWikiName(topoName);
+
+    // Try multiple fallback strategies to match visa_data.json entries
+    let entry = mapData[wikiName];
+
+    // Try with "and territories" suffix
+    if (!entry && wikiName) {
+      entry = mapData[wikiName + ' and territories'];
+    }
+
+    // Special case: UK and Crown dependencies
+    if (!entry && wikiName === 'United Kingdom') {
+      entry = mapData['United Kingdom and Crown dependencies'];
+    }
+
+    // Special case: China variants
+    if (!entry && wikiName === 'China') {
+      entry = mapData['China and territories'] ||
+              mapData['China (People\'s Republic of)'] ||
+              mapData['People\'s Republic of China'];
+    }
+    if (!entry && wikiName === 'Taiwan') {
+      entry = mapData['Republic of China'];
+    }
+
+    // Special case: Macau/Macao - try both spellings
+    if (!entry && wikiName === 'Macau') {
+      entry = mapData['Macao'];
+    }
+    if (!entry && wikiName === 'Macao') {
+      entry = mapData['Macau'];
+    }
+
+    // Check if this is a home country
+    const isHome = isHomeCountry(wikiName);
+
+    if (isHome) {
+      // Color home countries with the special home country color
+      el.attr('fill', STATUS_COLOURS.home_country).attr('opacity', 1);
+    } else if (!entry) {
+      el.attr('fill', STATUS_COLOURS.unknown).attr('opacity', empty ? 0.5 : 0.25);
+    } else {
+      const colour = STATUS_COLOURS[entry.status] || STATUS_COLOURS.unknown;
+      el.attr('fill', colour).attr('opacity', 1);
+
+      // Filter dimming
+      if (activeFilter && entry.status !== activeFilter) {
+        el.attr('opacity', 0.2);
+      }
+    }
+
+    // Group highlight
+    if (highlightedGroup) {
+      const inGroup = groupsData[highlightedGroup]?.countries?.includes(wikiName);
+      el.classed('highlighted', !!inGroup);
+    } else {
+      el.classed('highlighted', false);
+    }
+  });
+
+  el_mapData = mapData;
+}
+
+let el_mapData = {};
+
+// ─────────────────────────────────────────────────────────────
+// TOOLTIP
+// ─────────────────────────────────────────────────────────────
+
+function onCountryHover(event, d) {
+  const el = d3.select(this);
+  const topoName = el.attr('data-name');
+  const wikiName = getWikiName(topoName);
+  const entry = el_mapData[wikiName];
+  const isHome = isHomeCountry(wikiName);
+
+  const tooltip = document.getElementById('map-tooltip');
+  document.getElementById('tooltip-name').textContent = wikiName || topoName;
+
+  if (isHome) {
+    document.getElementById('tooltip-status').textContent = 'Home country';
+  } else {
+    document.getElementById('tooltip-status').textContent = entry
+      ? STATUS_LABELS[entry.status] || entry.status
+      : 'No data';
+  }
+
+  const mapRect = document.getElementById('map-area').getBoundingClientRect();
+  let x = event.clientX - mapRect.left + 12;
+  let y = event.clientY - mapRect.top + 12;
+  if (x + 200 > mapRect.width) x -= 220;
+  if (y + 60 > mapRect.height) y -= 70;
+
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+  tooltip.classList.add('visible');
+}
+
+function onCountryLeave() {
+  document.getElementById('map-tooltip').classList.remove('visible');
+}
+
+// ─────────────────────────────────────────────────────────────
+// COUNTRY PANEL
+// ─────────────────────────────────────────────────────────────
+
+function onCountryClick(event, d) {
+  const el = d3.select(this);
+  const topoName = el.attr('data-name');
+  const wikiName = getWikiName(topoName);
+  openPanel(wikiName);
+}
+
+function openPanel(countryName) {
+  const entry = el_mapData[countryName];
+  const isHome = isHomeCountry(countryName);
+  const panel = document.getElementById('country-panel');
+
+  document.getElementById('panel-name').textContent = countryName;
+
+  const badge = document.getElementById('panel-badge');
+  const badgeText = document.getElementById('panel-badge-text');
+
+  if (isHome) {
+    // Show as home country
+    badge.style.background = STATUS_COLOURS.home_country + '22';
+    badge.style.color = STATUS_COLOURS.home_country;
+    badgeText.textContent = 'Home country';
+  } else if (entry) {
+    const colour = STATUS_COLOURS[entry.status] || STATUS_COLOURS.unknown;
+    badge.style.background = colour + '22';
+    badge.style.color = colour;
+    badgeText.textContent = STATUS_LABELS[entry.status] || entry.status;
+  } else {
+    badge.style.background = STATUS_COLOURS.unknown + '22';
+    badge.style.color = STATUS_COLOURS.unknown;
+    badgeText.textContent = 'No data';
+  }
+
+  // Build body
+  const body = document.getElementById('panel-body');
+  body.innerHTML = '';
+
+  if (isHome) {
+    body.innerHTML = '<p style="color:var(--muted);font-size:0.85rem">This is your home country.</p>';
+  } else if (!entry) {
+    body.innerHTML = '<p style="color:var(--muted);font-size:0.85rem">No visa data available for this country.</p>';
+  } else {
+    const info = entry.info;
+
+    // Stay
+    if (info.stay) {
+      body.appendChild(makeField('Allowed stay', info.stay));
+    }
+
+    // Notes with group linkification
+    if (info.notes) {
+      const notesEl = makeField('Notes', '');
+      const p = document.createElement('p');
+      p.className = 'panel-field-value';
+      p.innerHTML = linkifyGroups(info.notes);
+      p.querySelectorAll('.group-link').forEach(link => {
+        link.addEventListener('mouseenter', () => {
+          highlightedGroup = link.dataset.group;
+          updateMap();
+        });
+        link.addEventListener('mouseleave', () => {
+          highlightedGroup = null;
+          updateMap();
+        });
+        link.addEventListener('click', () => {
+          window.open(groupsData[link.dataset.group]?.wikipedia, '_blank');
+        });
+      });
+      notesEl.appendChild(p);
+      body.appendChild(notesEl);
+    }
+
+    // Group breakdown (group mode)
+    if (entry.breakdown && entry.breakdown.length > 1) {
+      const bwrap = makeField('Per traveller', '');
+      const table = document.createElement('div');
+      table.className = 'traveller-breakdown';
+      for (const row of entry.breakdown) {
+        const el = document.createElement('div');
+        el.className = 'breakdown-row';
+        const colour = STATUS_COLOURS[row.info.status] || '#fff';
+        el.innerHTML = `
+          <div>
+            <div style="color:var(--cream)">${row.traveller}</div>
+            <div class="breakdown-passport">${row.info.nationality}</div>
+          </div>
+          <span class="status-badge" style="background:${colour}22;color:${colour};font-size:0.7rem;padding:2px 8px">
+            ${STATUS_LABELS[row.info.status] || row.info.status}
+          </span>`;
+        table.appendChild(el);
+      }
+      bwrap.appendChild(table);
+      body.appendChild(bwrap);
+    }
+
+    // Source link
+    let sourceUrl = null;
+    if (!groupMode && soloPassports.length > 0) {
+      const nat = info.nationality || soloPassports[0];
+      sourceUrl = visaData.data[nat]?._source_url;
+    } else if (groupMode && entry.breakdown?.[0]) {
+      const nat = entry.breakdown[0].info.nationality;
+      sourceUrl = visaData.data[nat]?._source_url;
+    }
+
+    if (sourceUrl) {
+      const a = document.createElement('a');
+      a.href = sourceUrl;
+      a.target = '_blank';
+      a.className = 'wiki-link';
+      a.innerHTML = '↗ View on Wikipedia';
+      body.appendChild(a);
+    }
+  }
+
+  panel.classList.add('open');
+}
+
+function makeField(label, value) {
+  const wrap = document.createElement('div');
+  wrap.className = 'panel-field';
+  wrap.innerHTML = `
+    <div class="panel-field-label">${label}</div>
+    ${value ? `<div class="panel-field-value">${value}</div>` : ''}
+  `;
+  return wrap;
+}
+
+function linkifyGroups(text) {
+  if (!groupsData) return text;
+  let result = text;
+  for (const [groupName, groupData] of Object.entries(groupsData)) {
+    const aliases = [groupName, ...(groupData.aliases || [])];
+    for (const alias of aliases) {
+      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`\\b${escaped}\\b`, 'g');
+      result = result.replace(re,
+        `<span class="group-link" data-group="${groupName}">${alias}</span>`);
+    }
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SEARCH
+// ─────────────────────────────────────────────────────────────
+
+// Mapping from country names and abbreviations to nationality names
+const COUNTRY_TO_NATIONALITY = {
+  // Common country names to nationality
+  'france': 'French',
+  'germany': 'German',
+  'uk': 'British',
+  'united kingdom': 'British',
+  'britain': 'British',
+  'england': 'British',
+  'usa': 'United States',
+  'united states': 'United States',
+  'america': 'United States',
+  'american': 'United States',
+  'us': 'United States',
+  'spain': 'Spanish',
+  'italy': 'Italian',
+  'greece': 'Greek',
+  'portugal': 'Portuguese',
+  'netherlands': 'Dutch',
+  'poland': 'Polish',
+  'sweden': 'Swedish',
+  'norway': 'Norwegian',
+  'denmark': 'Danish',
+  'finland': 'Finnish',
+  'belgium': 'Belgian',
+  'austria': 'Austrian',
+  'switzerland': 'Swiss',
+  'ireland': 'Irish',
+  'canada': 'Canadian',
+  'australia': 'Australian',
+  'new zealand': 'New Zealand',
+  'japan': 'Japanese',
+  'china': 'Chinese',
+  'india': 'Indian',
+  'russia': 'Russian',
+  'brazil': 'Brazilian',
+  'mexico': 'Mexican',
+  'argentina': 'Argentine',
+  'south africa': 'South African',
+  'egypt': 'Egyptian',
+  'israel': 'Israeli',
+  'turkey': 'Turkish',
+  'south korea': 'South Korean',
+  'korea': 'South Korean',
+  'singapore': 'Singaporean',
+  'malaysia': 'Malaysian',
+  'thailand': 'Thai',
+  'indonesia': 'Indonesian',
+  'philippines': 'Philippine',
+  'vietnam': 'Vietnamese',
+  'saudi arabia': 'Saudi Arabian',
+  'uae': 'Emirati',
+  'united arab emirates': 'Emirati',
+  'emirates': 'Emirati',
+  'chile': 'Chilean',
+  'peru': 'Peruvian',
+  'colombia': 'Colombian',
+  'venezuela': 'Venezuelan',
+  'ecuador': 'Ecuadorian',
+  'uruguay': 'Uruguayan',
+  'paraguay': 'Paraguayan',
+  'bolivia': 'Bolivian',
+  'ukraine': 'Ukrainian',
+  'romania': 'Romanian',
+  'bulgaria': 'Bulgarian',
+  'hungary': 'Hungarian',
+  'croatia': 'Croatian',
+  'slovenia': 'Slovenian',
+  'slovakia': 'Slovak',
+  'czech republic': 'Czech',
+  'estonia': 'Estonian',
+  'latvia': 'Latvian',
+  'lithuania': 'Lithuanian',
+  'iceland': 'Icelandic',
+  'malta': 'Maltese',
+  'cyprus': 'Cypriot',
+  'luxembourg': 'Luxembourgish',
+  'albania': 'Albanian',
+  'serbia': 'Serbian',
+  'montenegro': 'Montenegrin',
+  'bosnia': 'Bosnia and Herzegovina',
+  'bosnia and herzegovina': 'Bosnia and Herzegovina',
+  'north macedonia': 'North Macedonian',
+  'macedonia': 'North Macedonian',
+  'moldova': 'Moldovan',
+  'georgia': 'Georgian',
+  'armenia': 'Armenian',
+  'azerbaijan': 'Azerbaijani',
+  'kazakhstan': 'Kazakhstani',
+  'uzbekistan': 'Uzbekistani',
+  'kyrgyzstan': 'Kyrgyzstani',
+  'tajikistan': 'Tajikistani',
+  'turkmenistan': 'Turkmenistani',
+  'afghanistan': 'Afghan',
+  'pakistan': 'Pakistani',
+  'bangladesh': 'Bangladeshi',
+  'sri lanka': 'Sri Lankan',
+  'nepal': 'Nepalese',
+  'myanmar': 'Burmese',
+  'iran': 'Iranian',
+  'iraq': 'Iraqi',
+  'syria': 'Syrian',
+  'lebanon': 'Lebanese',
+  'jordan': 'Jordanian',
+  'yemen': 'Yemeni',
+  'oman': 'Omani',
+  'kuwait': 'Kuwaiti',
+  'qatar': 'Qatari',
+  'bahrain': 'Bahraini',
+  'morocco': 'Moroccan',
+  'algeria': 'Algerian',
+  'tunisia': 'Tunisian',
+  'libya': 'Libyan',
+  'sudan': 'Sudanese',
+  'ethiopia': 'Ethiopian',
+  'kenya': 'Kenyan',
+  'tanzania': 'Tanzanian',
+  'uganda': 'Ugandan',
+  'rwanda': 'Rwandan',
+  'ghana': 'Ghanaian',
+  'nigeria': 'Nigerian',
+  'senegal': 'Senegalese',
+  'mali': 'Malian',
+  'burkina faso': 'Burkinabe',
+  'niger': 'Nigerien',
+  'chad': 'Chadian',
+  'cameroon': 'Cameroonian',
+  'ivory coast': 'Ivorian',
+  'guinea': 'Guinean',
+  'sierra leone': 'Sierra Leonean',
+  'liberia': 'Liberian',
+  'togo': 'Togolese',
+  'benin': 'Beninese',
+  'angola': 'Angolan',
+  'zimbabwe': 'Zimbabwean',
+  'botswana': 'Botswana',
+  'namibia': 'Namibian',
+  'zambia': 'Zambian',
+  'malawi': 'Malawian',
+  'mozambique': 'Mozambican',
+  'madagascar': 'Malagasy'
+};
+
+function setupSearch(inputId, dropdownId, onSelect) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q || !visaData) { dropdown.classList.remove('open'); return; }
+
+    // Create a set to avoid duplicates
+    const matchedNationalities = new Set();
+
+    // 1. Direct nationality search (existing functionality)
+    visaData.nationalities
+      .filter(n => n.toLowerCase().includes(q))
+      .forEach(n => matchedNationalities.add(n));
+
+    // 2. Country name/abbreviation mapping search
+    for (const [searchTerm, nationality] of Object.entries(COUNTRY_TO_NATIONALITY)) {
+      if (searchTerm.includes(q) || q.includes(searchTerm)) {
+        // Check if the mapped nationality exists in our data
+        if (visaData.nationalities.includes(nationality)) {
+          matchedNationalities.add(nationality);
+        }
+      }
+    }
+
+    const matches = Array.from(matchedNationalities).slice(0, 30);
+
+    if (matches.length === 0) { dropdown.classList.remove('open'); return; }
+
+    dropdown.innerHTML = '';
+    matches.forEach(nat => {
+      const el = document.createElement('div');
+      el.className = 'search-option';
+      el.textContent = nat;
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        onSelect(nat);
+        input.value = '';
+        dropdown.classList.remove('open');
+      });
+      dropdown.appendChild(el);
+    });
+    dropdown.classList.add('open');
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => dropdown.classList.remove('open'), 150);
+  });
+
+  input.addEventListener('focus', () => {
+    if (input.value.trim()) input.dispatchEvent(new Event('input'));
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// SOLO MODE
+// ─────────────────────────────────────────────────────────────
+
+setupSearch('solo-search', 'solo-dropdown', nat => {
+  if (!soloPassports.includes(nat)) {
+    soloPassports.push(nat);
+    renderSoloTags();
+    updateMap();
+    closePanel();
+  }
+});
+
+// Solo random button
+document.getElementById('solo-random-btn').addEventListener('click', () => {
+  if (!visaData || !visaData.nationalities.length) return;
+
+  const randomNat = visaData.nationalities[Math.floor(Math.random() * visaData.nationalities.length)];
+  if (!soloPassports.includes(randomNat)) {
+    soloPassports.push(randomNat);
+    renderSoloTags();
+    updateMap();
+    closePanel();
+  }
+});
+
+function renderSoloTags() {
+  // Show tags inside the solo search section
+  const wrap = document.getElementById('solo-search-wrap');
+  // Remove old tags
+  wrap.querySelectorAll('.passport-tag').forEach(t => t.remove());
+
+  soloPassports.forEach((nat, i) => {
+    const tag = document.createElement('span');
+    tag.className = 'passport-tag';
+    tag.style.marginTop = '8px';
+    tag.style.display = 'inline-flex';
+    tag.innerHTML = `${nat}<button data-i="${i}">×</button>`;
+    tag.querySelector('button').addEventListener('click', () => {
+      soloPassports.splice(i, 1);
+      renderSoloTags();
+      updateMap();
+      closePanel();
+    });
+    wrap.insertBefore(tag, wrap.querySelector('.search-dropdown'));
+  });
+
+  if (soloPassports.length > 0) {
+    const sub = wrap.querySelector('.solo-hint') || (() => {
+      const s = document.createElement('div');
+      s.className = 'solo-hint';
+      s.style.cssText = 'font-size:0.7rem;color:var(--muted);margin-top:6px';
+      s.textContent = 'Add more passports to see your best option';
+      wrap.appendChild(s);
+      return s;
+    })();
+    sub.style.display = soloPassports.length > 1 ? 'block' : 'none';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// GROUP MODE
+// ─────────────────────────────────────────────────────────────
+
+function addTraveller() {
+  const name = `Traveller ${travellers.length + 1}`;
+  travellers.push({ name, passports: [] });
+  activeTravellerIdx = travellers.length - 1;
+  renderTravellers();
+  updateMap();
+  // Focus the group search
+  setTimeout(() => document.getElementById('group-search').focus(), 50);
+}
+
+function renderTravellers() {
+  const list = document.getElementById('travellers-list');
+  list.innerHTML = '';
+
+  travellers.forEach((t, i) => {
+    const card = document.createElement('div');
+    card.className = 'traveller-card';
+
+    const header = document.createElement('div');
+    header.className = 'traveller-header';
+    header.innerHTML = `
+      <div>
+        <div class="traveller-name">${t.name}</div>
+        <div class="traveller-sub">${t.passports.length} passport${t.passports.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="traveller-actions">
+        <button class="btn-icon danger" title="Remove traveller" data-remove="${i}">×</button>
+      </div>`;
+
+    header.querySelector('[data-remove]').addEventListener('click', e => {
+      e.stopPropagation();
+      travellers.splice(i, 1);
+      if (activeTravellerIdx >= travellers.length) activeTravellerIdx = travellers.length - 1;
+      renderTravellers();
+      updateMap();
+      closePanel();
+    });
+
+    const passports = document.createElement('div');
+    passports.className = 'traveller-passports';
+
+    t.passports.forEach((p, pi) => {
+      const tag = document.createElement('span');
+      tag.className = 'passport-tag';
+      tag.innerHTML = `${p}<button data-pi="${pi}" data-ti="${i}">×</button>`;
+      tag.querySelector('button').addEventListener('click', () => {
+        travellers[i].passports.splice(pi, 1);
+        renderTravellers();
+        updateMap();
+        closePanel();
+      });
+      passports.appendChild(tag);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-passport-btn';
+    addBtn.textContent = '+ Add passport';
+    addBtn.addEventListener('click', () => {
+      activeTravellerIdx = i;
+      document.getElementById('group-section').style.display = 'block';
+      document.getElementById('group-search-wrap').style.display = 'block';
+      document.getElementById('group-search').focus();
+      document.getElementById('group-search').placeholder = `Add passport for ${t.name}…`;
+    });
+    passports.appendChild(addBtn);
+
+    card.appendChild(header);
+    card.appendChild(passports);
+    list.appendChild(card);
+  });
+}
+
+setupSearch('group-search', 'group-dropdown', nat => {
+  if (activeTravellerIdx === null || activeTravellerIdx >= travellers.length) return;
+  const t = travellers[activeTravellerIdx];
+  if (!t.passports.includes(nat)) {
+    t.passports.push(nat);
+    renderTravellers();
+    updateMap();
+    closePanel();
+  }
+});
+
+// Group random button
+document.getElementById('group-random-btn').addEventListener('click', () => {
+  if (!visaData || !visaData.nationalities.length) return;
+  if (activeTravellerIdx === null || activeTravellerIdx >= travellers.length) return;
+
+  const randomNat = visaData.nationalities[Math.floor(Math.random() * visaData.nationalities.length)];
+  const t = travellers[activeTravellerIdx];
+  if (!t.passports.includes(randomNat)) {
+    t.passports.push(randomNat);
+    renderTravellers();
+    updateMap();
+    closePanel();
+  }
+});
+
+document.getElementById('add-traveller-btn').addEventListener('click', addTraveller);
+
+// ─────────────────────────────────────────────────────────────
+// GROUP TOGGLE
+// ─────────────────────────────────────────────────────────────
+
+document.getElementById('group-toggle').addEventListener('click', function() {
+  groupMode = !groupMode;
+  this.classList.toggle('on', groupMode);
+
+  document.getElementById('solo-section').style.display = groupMode ? 'none' : 'block';
+  document.getElementById('group-section').style.display = groupMode ? 'block' : 'none';
+  document.getElementById('group-search-wrap').style.display = groupMode ? 'block' : 'none';
+  document.getElementById('travellers-list').style.display = groupMode ? 'block' : 'none';
+  document.getElementById('add-traveller-wrap').style.display = groupMode ? 'block' : 'none';
+
+  if (groupMode && travellers.length === 0) {
+    addTraveller();
+  }
+
+  updateMap();
+  closePanel();
+});
+
+// ─────────────────────────────────────────────────────────────
+// LEGEND FILTER
+// ─────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.legend-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const filter = item.dataset.filter;
+    if (activeFilter === filter) {
+      activeFilter = null;
+      item.style.opacity = '1';
+      document.querySelectorAll('.legend-item').forEach(i => i.style.opacity = '1');
+    } else {
+      activeFilter = filter;
+      document.querySelectorAll('.legend-item').forEach(i => {
+        i.style.opacity = i.dataset.filter === filter ? '1' : '0.4';
+      });
+    }
+    updateMap();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// PANEL CLOSE
+// ─────────────────────────────────────────────────────────────
+
+document.getElementById('panel-close').addEventListener('click', closePanel);
+
+function closePanel() {
+  document.getElementById('country-panel').classList.remove('open');
+  highlightedGroup = null;
+  updateMap();
+}
+
+// ─────────────────────────────────────────────────────────────
+// RESIZE
+// ─────────────────────────────────────────────────────────────
+
+window.addEventListener('resize', () => {
+  initMap();
+  updateMap();
+});
+
+// ─────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────
+
+async function init() {
+  await loadData();
+  initMap();
+  updateMap();
+  document.getElementById('loading').classList.add('hidden');
+}
+
+init().catch(err => {
+  console.error(err);
+  document.querySelector('.loading-sub').textContent = 'Error loading data — check console';
+});
+
+// Check if a country is a home country for any of the selected passports
+function isHomeCountry(countryName) {
+  let allPassports = [];
+
+  if (!groupMode) {
+    allPassports = soloPassports;
+  } else {
+    // Collect all passports from all travellers in group mode
+    for (const traveller of travellers) {
+      allPassports = allPassports.concat(traveller.passports);
+    }
+  }
+
+  return allPassports.some(nationality => {
+    const homeCountry = NATIONALITY_TO_COUNTRY[nationality];
+    if (!homeCountry) return false;
+
+    // Handle various name variations
+    if (homeCountry === countryName) return true;
+
+    // Handle special cases
+    if (homeCountry === 'United Kingdom' && (
+      countryName === 'United Kingdom' ||
+      countryName === 'United Kingdom and Crown dependencies'
+    )) return true;
+
+    if (homeCountry === 'China' && (
+      countryName === 'China' ||
+      countryName === 'China and territories' ||
+      countryName === 'China (People\'s Republic of)' ||
+      countryName === 'People\'s Republic of China'
+    )) return true;
+
+    return false;
+  });
+}
+
+</script>
+</body>
+</html>
+

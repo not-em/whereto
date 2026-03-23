@@ -1,0 +1,147 @@
+{
+  "Schengen Area": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Schengen_Area",
+    "description": "29 European countries with abolished internal border controls. A single Schengen visa covers all member states. Non-EU visitors are limited to 90 days within any 180-day period.",
+    "aliases": ["Schengen", "Schengen Area", "Schengen area", "Schengen Zone"],
+    "countries": [
+      "Austria", "Belgium", "Bulgaria", "Croatia", "Czech Republic",
+      "Denmark", "Estonia", "Finland", "France", "Germany",
+      "Greece", "Hungary", "Iceland", "Italy", "Latvia",
+      "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Netherlands",
+      "Norway", "Poland", "Portugal", "Romania", "Slovakia",
+      "Slovenia", "Spain", "Sweden", "Switzerland"
+    ]
+  },
+
+  "European Union": {
+    "wikipedia": "https://en.wikipedia.org/wiki/European_Union",
+    "description": "A political and economic union of 27 European member states. EU citizens have the right to live, work and travel freely across all member states.",
+    "aliases": ["EU", "European Union", "the EU"],
+    "countries": [
+      "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus",
+      "Czech Republic", "Denmark", "Estonia", "Finland", "France",
+      "Germany", "Greece", "Hungary", "Ireland", "Italy",
+      "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands",
+      "Poland", "Portugal", "Romania", "Slovakia", "Slovenia",
+      "Spain", "Sweden"
+    ]
+  },
+
+  "Common Travel Area": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Common_Travel_Area",
+    "description": "An open borders arrangement between the United Kingdom and Ireland. British and Irish citizens can move freely between the two countries without passport checks.",
+    "aliases": ["Common Travel Area", "CTA"],
+    "countries": [
+      "United Kingdom", "Ireland"
+    ]
+  },
+
+  "Gulf Cooperation Council": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Gulf_Cooperation_Council",
+    "description": "A political and economic union of six Arab Gulf states, founded in 1981. GCC citizens enjoy free movement and shared visa policies across member states.",
+    "aliases": ["GCC", "Gulf Cooperation Council", "Gulf states"],
+    "countries": [
+      "Bahrain", "Kuwait", "Oman", "Qatar", "Saudi Arabia", "United Arab Emirates"
+    ]
+  },
+
+  "ASEAN": {
+    "wikipedia": "https://en.wikipedia.org/wiki/ASEAN",
+    "description": "The Association of Southeast Asian Nations — a regional intergovernmental organisation of 11 Southeast Asian countries promoting economic, political and security cooperation.",
+    "aliases": ["ASEAN", "Association of Southeast Asian Nations"],
+    "countries": [
+      "Brunei", "Cambodia", "Indonesia", "Laos", "Malaysia",
+      "Myanmar", "Philippines", "Singapore", "Thailand", "Timor-Leste", "Vietnam"
+    ]
+  },
+
+  "CARICOM": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Caribbean_Community",
+    "description": "The Caribbean Community — a political and economic union of 15 member states across the Caribbean. CARICOM members generally enjoy freedom of movement among member states.",
+    "aliases": ["CARICOM", "Caribbean Community", "the Caribbean Community"],
+    "countries": [
+      "Antigua and Barbuda", "Bahamas", "Barbados", "Belize", "Dominica",
+      "Grenada", "Guyana", "Haiti", "Jamaica", "Montserrat",
+      "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines",
+      "Suriname", "Trinidad and Tobago"
+    ]
+  },
+
+  "ECOWAS": {
+    "wikipedia": "https://en.wikipedia.org/wiki/ECOWAS",
+    "description": "The Economic Community of West African States — a regional bloc of 12 West African countries (as of 2025, following the withdrawal of Mali, Burkina Faso and Niger). ECOWAS citizens can move freely across member states.",
+    "aliases": ["ECOWAS", "Economic Community of West African States"],
+    "countries": [
+      "Benin", "Cape Verde", "Côte d'Ivoire", "Gambia", "Ghana",
+      "Guinea", "Guinea-Bissau", "Liberia", "Nigeria", "Senegal",
+      "Sierra Leone", "Togo"
+    ]
+  },
+
+  "East Africa Tourist Visa": {
+    "wikipedia": "https://en.wikipedia.org/wiki/East_Africa_Tourist_Visa",
+    "description": "A joint tourist visa covering Kenya, Uganda and Rwanda. A single visa grants entry to all three countries, valid for 90 days.",
+    "aliases": ["East Africa Tourist Visa", "East African Tourist Visa", "East Africa tourist visa"],
+    "countries": [
+      "Kenya", "Uganda", "Rwanda"
+    ]
+  },
+
+  "KAZA Visa": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Kavango%E2%80%93Zambezi_Transfrontier_Conservation_Area",
+    "description": "The Kavango–Zambezi (KAZA) UniVisa covers Zambia and Zimbabwe. A single visa grants entry to both countries and allows day trips to Botswana via the Kazungula border post.",
+    "aliases": ["KAZA", "KAZA visa", "KAZA UniVisa", "universal (KAZA) visa"],
+    "countries": [
+      "Zambia", "Zimbabwe"
+    ]
+  },
+
+  "Mercosur": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Mercosur",
+    "description": "A South American trade bloc whose full members are Argentina, Brazil, Paraguay and Uruguay. Citizens of member and associate states enjoy simplified border crossing arrangements.",
+    "aliases": ["Mercosur", "MERCOSUR"],
+    "countries": [
+      "Argentina", "Brazil", "Paraguay", "Uruguay"
+    ]
+  },
+
+  "Nordic Countries": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Nordic_countries",
+    "description": "Denmark, Finland, Iceland, Norway and Sweden share a long history of cooperation and free movement under the Nordic Passport Union, predating the Schengen Area.",
+    "aliases": ["Nordic countries", "Nordic nations", "Nordics"],
+    "countries": [
+      "Denmark", "Finland", "Iceland", "Norway", "Sweden"
+    ]
+  },
+
+  "Pacific Islands Forum": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Pacific_Islands_Forum",
+    "description": "An intergovernmental organisation of 18 countries across the Pacific region, promoting cooperation on trade, security and development.",
+    "aliases": ["Pacific Islands Forum", "Pacific Islands"],
+    "countries": [
+      "Australia", "Cook Islands", "Fiji", "Kiribati", "Marshall Islands",
+      "Micronesia", "Nauru", "New Zealand", "Niue", "Palau",
+      "Papua New Guinea", "Samoa", "Solomon Islands", "Tonga", "Tuvalu",
+      "Vanuatu"
+    ]
+  },
+
+  "Commonwealth of Nations": {
+    "wikipedia": "https://en.wikipedia.org/wiki/Commonwealth_of_Nations",
+    "description": "A political association of 56 member states, mostly former territories of the British Empire. Commonwealth citizens may receive consular assistance from other member states where their own country has no embassy.",
+    "aliases": ["Commonwealth", "Commonwealth of Nations", "the Commonwealth"],
+    "countries": [
+      "Antigua and Barbuda", "Australia", "Bahamas", "Bangladesh", "Barbados",
+      "Belize", "Botswana", "Brunei", "Cameroon", "Canada",
+      "Cyprus", "Dominica", "Eswatini", "Fiji", "Gambia",
+      "Ghana", "Grenada", "Guyana", "India", "Jamaica",
+      "Kenya", "Kiribati", "Lesotho", "Malawi", "Malaysia",
+      "Maldives", "Malta", "Mauritius", "Mozambique", "Namibia",
+      "Nauru", "New Zealand", "Nigeria", "Pakistan", "Papua New Guinea",
+      "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines",
+      "Samoa", "Seychelles", "Sierra Leone", "Singapore", "Solomon Islands",
+      "South Africa", "Sri Lanka", "Tanzania", "Tonga", "Trinidad and Tobago",
+      "Tuvalu", "Uganda", "United Kingdom", "Vanuatu", "Zambia"
+    ]
+  }
+}
